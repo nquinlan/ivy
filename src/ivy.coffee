@@ -1,4 +1,5 @@
-{queue} = require './queues'
+{notifier} = require './notifiers'
+{queue}    = require './queues'
 
 class Ivy
   constructor: (options) ->
@@ -33,28 +34,49 @@ class Ivy
     else
       return @taskRegistry[name].func.apply @taskRegistry[name].func, args
 
-  delayedCall: ->
+  confirmedDelayedCall: ->
     func = arguments.slice 0, 1
-    cb   = arguments.slice arguments.length-1
+    funcCb = arguments.slice(arguments.length-2, arguments.length-1)[0]
+    cb   = arguments.slice(arguments.length-1)[0]
+
     if arguments.length > 2
       args = arguments.slice 1, arguments.length-1
     else
       args = []
 
+    eventId = @notifier.getId()
+
+    @notifier.subscribe eventId, (err, args) ->
+      # err is from internal errors. Error from inside called function
+      # should still be called as a first argument to received callback function
+      if not err
+        try
+          args = JSON.parse args
+        catch error
+          err = error
+
+      if err
+        funcCb.call func, err
+      else
+        funcCb.apply func, args
+
+
+
     queue.sendTask
       name:    @taskObjectRegistry[func]
+      eventId: eventId
       options: @taskRegistry[@taskObjectRegistry[func]].options
       args:    JSON.parse JSON.stringify args
     , cb
 
-  delayedCallSync: ->
-    fargs = Array.prototype.slice.call(arguments)
-    func = fargs.slice 0, 1
-    args = fargs.slice(1) or []
-    queue.sendTask
-      name:    @taskObjectRegistry[func]
-      options: @taskRegistry[@taskObjectRegistry[func]].options
-      args:    JSON.parse JSON.stringify args
+#  delayedCallSync: ->
+#    fargs = Array.prototype.slice.call(arguments)
+#    func = fargs.slice 0, 1
+#    args = fargs.slice(1) or []
+#    queue.sendTask
+#      name:    @taskObjectRegistry[func]
+#      options: @taskRegistry[@taskObjectRegistry[func]].options
+#      args:    JSON.parse JSON.stringify args
 
 
   listen: ->

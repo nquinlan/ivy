@@ -67,9 +67,21 @@ ivy.registerTask(factorial, {
 });
 
 if (process.env.NODE_ENV==='producer') {
-  // execute task
+  // schedule task execution
   ivy.delayedCall(factorial, 5, function(err, result) {
     console.log("Factorial result is", result);
+  };
+
+  // or, execute task, but wait it was scheduled properly
+  ivy.confirmedDelayedCall(factorial, 5, function(err, result) {
+    console.log("Factorial result is", result);
+  }, function (err, taskId) {
+    if (err) {
+      console.error("Task wasn't scheduled! Error was: ", err);
+    }
+    else {
+      console.log("Task scheduled. Waiting for notitication ID", taskId);
+    }
   });
 
 }
