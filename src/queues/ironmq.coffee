@@ -64,6 +64,8 @@ class IronMQQueue
   sendTask: ({name, options, args}, cb) ->
     options.body = JSON.stringify {name, options, args}
 
+    console.log 'Send task', options
+
     @queue.post options, (err, taskId) ->
       cb err, taskId
 
