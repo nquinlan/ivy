@@ -12,7 +12,7 @@ ivy         = require '../../../src'
 
 
 describe 'IronMQ Queue Backend Test', ->
-  mqOptions = 
+  mqOptions =
     type: 'ironmq'
     auth:
       token:      process.env.IRONMQ_TOKEN
@@ -55,6 +55,10 @@ describe 'IronMQ Queue Backend Test', ->
 
         it 'I should see task scheduled for factorial', ->
           assert.equal 'factorial', (v for k,v of tasks)[0].name
+
+        it 'I should see task options are empty', ->
+          value = (v for k,v of tasks)[0].options
+          assert.equal (JSON.stringify value), '{}'
 
     describe 'and when I attach consumer', ->
       before (done) ->
