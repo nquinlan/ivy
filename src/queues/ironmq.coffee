@@ -74,34 +74,69 @@ class IronMQQueue
 
   consumeTasks: ->
     toRetrieve = @options.messageSize or 1
-    @queue.get n: toRetrieve, (err, ironTasks) =>
-      if err
-        logger.warn "IVY_WARNING Cannot retrieve task from IronMQ", err
-        @manager.emit 'mqError', err if err
-        return
+    if @options.arrayTask is 1
+      @queue.get n: toRetrieve, (err, ironTasks) =>
+        if err
+          logger.warn "IVY_WARNING Cannot retrieve task from IronMQ", err
+          @manager.emit 'mqError', err if err
+          return
 
-      if toRetrieve < 2 and ironTasks #.length > 0
-        ironTasks = [ironTasks]
+        if toRetrieve < 2 and ironTasks #.length > 0
+          ironTasks = [ironTasks]
 
-      for ironTask in ironTasks or []
-        @manager.emit 'messageRetrieved', ironTasks
+        taskObjects = []
 
-        try
-          taskArgs = JSON.parse ironTask.body
-        catch e
-          logger.error 'ironTask is', ironTask
-          logger.error "IVY_IRONMQ_ERROR Retrieve tasks that cannot be parsed as JSON, deleting from queue: #{ironTask}", e
-          @queue.del ironTask.id, (err, body) =>
-            if err
-              logger.warn "IVY_WARNING Cannot delete task from IronMQ", err
-              @manager.emit 'mqError', err
+        for ironTask in ironTasks or []
+          @manager.emit 'messageRetrieved', ironTasks
 
+          try
+            taskArgs = JSON.parse ironTask.body
+            taskObject =
+              id:      ironTask.id
+              name:      taskArgs.name
+              args:      taskArgs.args
+              options:   taskArgs.options
+            taskObjects.push taskObject
+          catch e
+            logger.error 'ironTask is', ironTask
+            logger.error "IVY_IRONMQ_ERROR Retrieve tasks that cannot be parsed as JSON, deleting from queue: #{ironTask}", e
+            @queue.del ironTask.id, (err, body) =>
+              if err
+                logger.warn "IVY_WARNING Cannot delete task from IronMQ", err
+                @manager.emit 'mqError', err
 
         @manager.emit 'scheduledTaskRetrieved',
-          id:        ironTask.id
-          name:      taskArgs.name
-          args:      taskArgs.args
-          options:   taskArgs.options
+          taskObjects
+
+    else
+      @queue.get n: toRetrieve, (err, ironTasks) =>
+        if err
+          logger.warn "IVY_WARNING Cannot retrieve task from IronMQ", err
+          @manager.emit 'mqError', err if err
+          return
+
+        if toRetrieve < 2 and ironTasks #.length > 0
+          ironTasks = [ironTasks]
+
+        for ironTask in ironTasks or []
+          @manager.emit 'messageRetrieved', ironTasks
+
+          try
+            taskArgs = JSON.parse ironTask.body
+          catch e
+            logger.error 'ironTask is', ironTask
+            logger.error "IVY_IRONMQ_ERROR Retrieve tasks that cannot be parsed as JSON, deleting from queue: #{ironTask}", e
+            @queue.del ironTask.id, (err, body) =>
+              if err
+                logger.warn "IVY_WARNING Cannot delete task from IronMQ", err
+                @manager.emit 'mqError', err
+
+
+          @manager.emit 'scheduledTaskRetrieved',
+            id:        ironTask.id
+            name:      taskArgs.name
+            args:      taskArgs.args
+            options:   taskArgs.options
 
   taskExecuted: (err, result) ->
     @queue.del result.id, (err, body) =>

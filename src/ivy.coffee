@@ -1,5 +1,6 @@
 {EventEmitter} = require 'events'
-logger       = require './logger'
+util           = require 'util'
+logger         = require './logger'
 {queue}        = require './queues'
 {notifier}     = require './notifiers'
 
@@ -17,7 +18,11 @@ class Ivy extends EventEmitter
   # Setup main "singleton" instance of ivy that is used when requiring it
   setupMain: ->
     queue.on 'scheduledTaskRetrieved', =>
-      @scheduledTaskRetrieved.apply @, arguments
+      if  util.isArray(arguments[0])
+        for arg in arguments[0]
+          @scheduledTaskRetrieved arg
+      else
+        @scheduledTaskRetrieved.apply @, arguments
 
     queue.setupMain    @
     notifier.setupMain @
